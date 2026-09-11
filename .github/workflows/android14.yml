@@ -70,22 +70,31 @@ jobs:
             squashfs-tools swig tar tree u-boot-tools udev unzip util-linux uuid \
             uuid-dev uuid-runtime vim wget whiptail xfsprogs xsltproc xxd xz-utils \
             zip zlib1g-dev zstd binwalk ripgrep sudo
+          sudo mkdir -p /builder/release/
+          sudo /bin/cp -a ${{ github.workspace }}/* /builder/
+          sudo ln -svf /usr/bin/python3 /usr/bin/python2
           df -Th
 
-      - name: Run Build in Ubuntu 22.04
+      - name: Build Uboot 2017
         working-directory: /builder
         run: |
           set -x
-          sudo mkdir -p /builder/release/
-          sudo /bin/cp -a ${{ github.workspace }}/* .
           WORKDIR=`pwd`
-          ls -alh
+          sudo mkdir -p /builder/release/
           cd ${WORKDIR}/u-boot
-          sudo ln -svf /usr/bin/python3 /usr/bin/python2
+          ls -alh
           which python2
           ./kdev-build-uboot.sh
           sudo cp uboot.img /builder/release/
+
+      - name: Build kernel 6.1
+        working-directory: /builder
+        run: |
+          set -x
+          WORKDIR=`pwd`
+          sudo mkdir -p /builder/release/
           cd ${WORKDIR}/kernel-6.1
+          ls -alh
           ./kdev-build-kernel.sh
           sudo cp boot.img resource.img /builder/release/
 
@@ -108,12 +117,7 @@ jobs:
 
             **测试中，无法引导，不要下载**
 
-
             ## 固件下载与刷写指引
-
-            若您的设备已自行焊接 eMMC，并希望以 eMMC 作为启动介质：
-
-            * [EMMC recovery固件刷写指引](https://github.com/yifengyou/BDY_G98_RK3588/blob/master/docs/%E5%88%B7%E6%9C%BA%E6%8C%87%E5%BC%95/emmc_recovery.md)
 
             ## 免责声明
 
