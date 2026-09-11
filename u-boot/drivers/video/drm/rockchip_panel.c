@@ -26,9 +26,6 @@
 #include "rockchip_connector.h"
 #include "rockchip_panel.h"
 
-int is_mipi_lcd_exit = 0x0;
-int vpx_id = 0;
-
 struct rockchip_cmd_header {
 	u8 data_type;
 	u8 delay_ms;
@@ -55,7 +52,7 @@ struct rockchip_panel_plat {
 		unsigned int unprepare;
 		unsigned int enable;
 		unsigned int disable;
-		//unsigned int reset;
+		unsigned int reset;
 		unsigned int init;
 	} delay;
 
@@ -70,7 +67,7 @@ struct rockchip_panel_priv {
 	struct udevice *backlight;
 	struct spi_slave *spi_slave;
 	struct gpio_desc enable_gpio;
-	//struct gpio_desc reset_gpio;
+	struct gpio_desc reset_gpio;
 
 	int cmd_type;
 	struct gpio_desc spi_sdi_gpio;
@@ -295,14 +292,12 @@ static int rockchip_panel_send_dsi_cmds(struct mipi_dsi_device *dsi,
 	return 0;
 }
 
-extern int khadas_mipi_id;
 static void panel_simple_prepare(struct rockchip_panel *panel)
 {
 	struct rockchip_panel_plat *plat = dev_get_platdata(panel->dev);
 	struct rockchip_panel_priv *priv = dev_get_priv(panel->dev);
 	struct mipi_dsi_device *dsi = dev_get_parent_platdata(panel->dev);
 	int ret;
-	u8 mode;
 
 	if (priv->prepared)
 		return;
@@ -316,40 +311,18 @@ static void panel_simple_prepare(struct rockchip_panel *panel)
 	if (plat->delay.prepare)
 		mdelay(plat->delay.prepare);
 
+	if (dm_gpio_is_valid(&priv->reset_gpio))
+		dm_gpio_set_value(&priv->reset_gpio, 1);
+
+	if (plat->delay.reset)
+		mdelay(plat->delay.reset);
+
+	if (dm_gpio_is_valid(&priv->reset_gpio))
+		dm_gpio_set_value(&priv->reset_gpio, 0);
+
 	if (plat->delay.init)
 		mdelay(plat->delay.init);
 
-	if (4!=khadas_mipi_id && 2!=khadas_mipi_id) {
-	mipi_dsi_dcs_get_power_mode(dsi, &mode);
-	if(0x8 == mode){
-		is_mipi_lcd_exit = is_mipi_lcd_exit | (0x1 << vpx_id);
-	}
-	else{
-		if(2 == vpx_id && 2!=khadas_mipi_id){
-			is_mipi_lcd_exit = is_mipi_lcd_exit & 0xb;
-			run_command("fdt set /dsi@fde20000 status disable", 0);
-			run_command("fdt set /dsi@fde20000/panel@0 status disable", 0);
-			run_command("fdt set /dsi@fde20000/ports/port@0/endpoint@0 status disable", 0);
-			run_command("fdt set /display-subsystem/route/route-dsi0 status disable", 0);
-			printf("disable dsi0\n");
-		}
-		else if(3 == vpx_id && 2!=khadas_mipi_id){
-			is_mipi_lcd_exit = is_mipi_lcd_exit & 0x7;
-			run_command("fdt set /dsi@fde30000 status disable", 0);
-			run_command("fdt set /dsi@fde30000/panel@0 status disable", 0);
-			run_command("fdt set /dsi@fde30000/ports/port@0/endpoint@1 status disable", 0);
-			run_command("fdt set /display-subsystem/route/route-dsi1 status disable", 0);
-			printf("disable dsi1\n");
-		}
-		printf("(vpx_id=%x)==(is_mipi_lcd_exit=%x)=vp2 and vp3 status disable\n", vpx_id,is_mipi_lcd_exit);
-	}
-	}
-	printf("0x8===>mode: 0x%d is_mipi_lcd_exit=%d\n", mode,is_mipi_lcd_exit);
-       /*ret = mipi_dsi_dcs_read(dsi, 0xDA, &khadas_mipi_id, sizeof(khadas_mipi_id));
-       if (ret <= 0) {
-               printf("mipi_dsi_dcs_read ID ,error=%d!!\n", ret);
-       }
-       printf("hlm panel_simple_prepare() khadas_mipi_id=%d\n", khadas_mipi_id);*/
 	if (plat->on_cmds) {
 		if (priv->cmd_type == CMD_TYPE_SPI)
 			ret = rockchip_panel_send_spi_cmds(panel, panel->state,
@@ -362,8 +335,7 @@ static void panel_simple_prepare(struct rockchip_panel *panel)
 		if (ret)
 			printf("failed to send on cmds: %d\n", ret);
 	}
-	//mipi_dsi_dcs_get_power_mode(dsi, &mode);
-	//printf("0x9c===>mode: 0x%x\n", mode);
+
 	priv->prepared = true;
 }
 
@@ -390,8 +362,8 @@ static void panel_simple_unprepare(struct rockchip_panel *panel)
 			printf("failed to send off cmds: %d\n", ret);
 	}
 
-	//if (dm_gpio_is_valid(&priv->reset_gpio))
-	//	dm_gpio_set_value(&priv->reset_gpio, 1);
+	if (dm_gpio_is_valid(&priv->reset_gpio))
+		dm_gpio_set_value(&priv->reset_gpio, 1);
 
 	if (dm_gpio_is_valid(&priv->enable_gpio))
 		dm_gpio_set_value(&priv->enable_gpio, 0);
@@ -446,97 +418,12 @@ static const struct rockchip_panel_funcs rockchip_panel_funcs = {
 	.disable = panel_simple_disable,
 };
 
-#ifdef CONFIG_DM_I2C
-#define TP_I2C_BUS_NUM 6
-#define TP05_CHIP_ADDR "0x38"
-#define TP10_CHIP_ADDR "0x14"
-static struct udevice *i2c_cur_bus;
-
-static int cmd_i2c_set_bus_num(unsigned int busnum)
-{
-    struct udevice *bus;
-    int ret;
-
-    ret = uclass_get_device_by_seq(UCLASS_I2C, busnum, &bus);
-    if (ret) {
-        printf("%s: No bus %d\n", __func__, busnum);
-        return ret;
-    }
-    i2c_cur_bus = bus;
-
-    return 0;
-}
-
-static int i2c_get_cur_bus(struct udevice **busp)
-{
-	if (!i2c_cur_bus) {
-		if (cmd_i2c_set_bus_num(TP_I2C_BUS_NUM)) {
-		    printf("Default I2C bus %d not found\n",
-		           TP_I2C_BUS_NUM);
-		    return -ENODEV;
-		}
-	}
-
-    if (!i2c_cur_bus) {
-        puts("No I2C bus selected\n");
-        return -ENODEV;
-    }
-    *busp = i2c_cur_bus;
-
-    return 0;
-}
-
-static int i2c_get_cur_bus_chip(uint chip_addr, struct udevice **devp)
-{
-    struct udevice *bus;
-    int ret;
-
-    ret = i2c_get_cur_bus(&bus);
-    if (ret)
-        return ret;
-
-    return i2c_get_chip(bus, chip_addr, 1, devp);
-}
-#endif
-
-static int kbi_i2c_read(uint reg, const char *cp)
-{
-	int ret;
-	char val[64];
-	uchar   linebuf[1];
-	uchar chip;
-#ifdef CONFIG_DM_I2C
-	struct udevice *dev;
-#endif
-
-
-	chip = simple_strtoul(cp, NULL, 16);
-
-#ifdef CONFIG_DM_I2C
-	ret = i2c_get_cur_bus_chip(chip, &dev);
-	if (!ret)
-		ret = dm_i2c_read(dev, reg, (uint8_t *)linebuf, 1);
-#else
-	ret = i2c_read(chip, reg, 1, linebuf, 1);
-#endif
-
-	if (ret)
-		printf("Error reading the chip: %d\n",ret);
-	else {
-		sprintf(val, "%d", linebuf[0]);
-		ret = simple_strtoul(val, NULL, 10);
-
-	}
-	return ret;
-}
-
 static int rockchip_panel_ofdata_to_platdata(struct udevice *dev)
 {
 	struct rockchip_panel_plat *plat = dev_get_platdata(dev);
 	const void *data;
 	int len = 0;
 	int ret;
-	static bool first_flag = 1;
 
 	plat->power_invert = dev_read_bool(dev, "power-invert");
 
@@ -545,52 +432,13 @@ static int rockchip_panel_ofdata_to_platdata(struct udevice *dev)
 	plat->delay.enable = dev_read_u32_default(dev, "enable-delay-ms", 0);
 	plat->delay.disable = dev_read_u32_default(dev, "disable-delay-ms", 0);
 	plat->delay.init = dev_read_u32_default(dev, "init-delay-ms", 0);
-	//plat->delay.reset = dev_read_u32_default(dev, "reset-delay-ms", 0);
+	plat->delay.reset = dev_read_u32_default(dev, "reset-delay-ms", 0);
 
 	plat->bus_format = dev_read_u32_default(dev, "bus-format",
 						MEDIA_BUS_FMT_RBG888_1X24);
 	plat->bpc = dev_read_u32_default(dev, "bpc", 8);
 
-	if(first_flag){
-		khadas_mipi_id = kbi_i2c_read(0xA8,TP05_CHIP_ADDR);
-		printf("TP05 id=0x%x\n",khadas_mipi_id);
-		if(khadas_mipi_id == 0x51){//old TS050
-			khadas_mipi_id = 1;
-		}else if(khadas_mipi_id == 0x79){//new TS050
-			khadas_mipi_id = 3;
-		}else{
-			khadas_mipi_id = kbi_i2c_read(0x9e,TP10_CHIP_ADDR);
-			printf("TP10 id=0x%x\n",khadas_mipi_id);
-			if(khadas_mipi_id == 0x00){//TS101
-				run_command("i2c dev 6", 0);
-				run_command("gpio clear gpio022", 0);
-				mdelay(50);
-				run_command("gpio set gpio022", 0);
-				run_command("i2c md 0x14 0x814A.2 1", 0);
-				uint8_t ts101_exist = kbi_i2c_read(0x814A, TP10_CHIP_ADDR);
-				printf("TP101 Vendor_id =0x%x\n",ts101_exist);
-				if (ts101_exist == 2) {
-					khadas_mipi_id = 4;//wuming TS101
-				} else if (ts101_exist == 0) {
-					khadas_mipi_id = 2;//old TS101
-				}
-			} else {
-				khadas_mipi_id = 0;
-			}
-		}
-		first_flag = 0;
-		printf("hlm khadas_mipi_id=%d\n",khadas_mipi_id);
-	}
-	if(3 == khadas_mipi_id || 0 == khadas_mipi_id){//new TS050
-		printf("new TS050 to parse panel init sequence2\n");
-		data = dev_read_prop(dev, "panel-init-sequence2", &len);
-	} else if (4 == khadas_mipi_id || 2 == khadas_mipi_id) {//TS101
-		printf("TS101 to parse panel init sequence3\n");
-		data = dev_read_prop(dev, "panel-init-sequence3", &len);
-	} else {//old TS050
-		printf("old TS050 to parse panel init sequence\n");
-		data = dev_read_prop(dev, "panel-init-sequence", &len);
-	}
+	data = dev_read_prop(dev, "panel-init-sequence", &len);
 	if (data) {
 		plat->on_cmds = calloc(1, sizeof(*plat->on_cmds));
 		if (!plat->on_cmds)
@@ -642,12 +490,12 @@ static int rockchip_panel_probe(struct udevice *dev)
 		return ret;
 	}
 
-	//ret = gpio_request_by_name(dev, "reset-gpios", 0,
-	//			   &priv->reset_gpio, GPIOD_IS_OUT);
-	//if (ret && ret != -ENOENT) {
-	//	printf("%s: Cannot get reset GPIO: %d\n", __func__, ret);
-	//	return ret;
-	//}
+	ret = gpio_request_by_name(dev, "reset-gpios", 0,
+				   &priv->reset_gpio, GPIOD_IS_OUT);
+	if (ret && ret != -ENOENT) {
+		printf("%s: Cannot get reset GPIO: %d\n", __func__, ret);
+		return ret;
+	}
 
 	ret = uclass_get_device_by_phandle(UCLASS_PANEL_BACKLIGHT, dev,
 					   "backlight", &priv->backlight);
@@ -709,7 +557,7 @@ static int rockchip_panel_probe(struct udevice *dev)
 			dm_gpio_set_value(&priv->spi_sdi_gpio, 1);
 			dm_gpio_set_value(&priv->spi_scl_gpio, 1);
 			dm_gpio_set_value(&priv->spi_cs_gpio, 1);
-			//dm_gpio_set_value(&priv->reset_gpio, 0);
+			dm_gpio_set_value(&priv->reset_gpio, 0);
 		}
 	}
 

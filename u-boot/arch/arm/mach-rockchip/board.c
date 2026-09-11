@@ -66,7 +66,6 @@ static ulong orig_images_ep;
 
 __weak int rk_board_late_init(void)
 {
-	run_command("gpio clear 138; gpio set 139; gpio clear 140;", 0);
 	return 0;
 }
 
@@ -92,8 +91,6 @@ __weak int set_armclk_rate(void)
 
 __weak int rk_board_init(void)
 {
-	run_command("gpio set 130", 0);//GPIO4_A2 vcc 5v
-        run_command("gpio set 100", 0);//GPIO3_A4 TYPEC0_PWR_EN
 	return 0;
 }
 

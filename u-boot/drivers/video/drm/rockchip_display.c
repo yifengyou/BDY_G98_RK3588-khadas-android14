@@ -63,7 +63,7 @@ static unsigned long cubic_lut_memory_start;
 static unsigned long memory_end;
 static struct base2_info base_parameter;
 static u32 align_size = PAGE_SIZE;
-int khadas_mipi_id = 0;
+
 /*
  * the phy types are used by different connectors in public.
  * The current version only has inno hdmi phy for hdmi and tve.
@@ -500,16 +500,7 @@ static int display_get_timing_from_dts(struct rockchip_panel *panel,
 	int ret;
 
 	mcu_panel = dev_read_subnode(panel->dev, "mcu-panel");
-
-    if (khadas_mipi_id == 2) {//old TS101
-	       dt = dev_read_subnode(panel->dev, "display-timings1");
-	} else if (khadas_mipi_id == 3) {//new TS050
-	       dt = dev_read_subnode(panel->dev, "display-timings2");
-	} else if (khadas_mipi_id == 4) {//wuming TS101
-	       dt = dev_read_subnode(panel->dev, "display-timings3");
-	} else {//old TS050
-	       dt = dev_read_subnode(panel->dev, "display-timings");
-	}
+	dt = dev_read_subnode(panel->dev, "display-timings");
 	if (ofnode_valid(dt)) {
 		ret = ofnode_parse_phandle_with_args(dt, "native-mode", NULL,
 						     0, 0, &args);
@@ -1440,7 +1431,6 @@ static int load_bmp_logo(struct logo_info *logo, const char *bmp_name)
 	void *dst_rotate = NULL;
 	int len, dst_size;
 	int ret = 0;
-	char cmd[256] = {"0"};
 
 	if (!logo || !bmp_name)
 		return -EINVAL;
@@ -1460,19 +1450,11 @@ static int load_bmp_logo(struct logo_info *logo, const char *bmp_name)
 
 	bmp_create(&bmp, &bitmap_callbacks);
 
-    sprintf(cmd, "ext4load mmc 0:9 0x%p %s %x", bmp_data, bmp_name, MAX_IMAGE_BYTES);
-    printf("load_bmp_logo cmd %s...\n", cmd);
-    if(run_command(cmd, 0)){
-        len = rockchip_read_resource_file(bmp_data, bmp_name, 0, MAX_IMAGE_BYTES);
-        printf("rockchip_read_resource_file len %d...\n", len);
-        if (len < 0) {
-            ret = -EINVAL;
-            goto free_bmp_data;
-        }
-    } else {
-      len = MAX_IMAGE_BYTES;
-       printf("load custom logo success...\n");
-    }
+	len = rockchip_read_resource_file(bmp_data, bmp_name, 0, MAX_IMAGE_BYTES);
+	if (len < 0) {
+		ret = -EINVAL;
+		goto free_bmp_data;
+	}
 
 	/* analyse the BMP */
 	code = bmp_analyse(&bmp, len, bmp_data);
@@ -2131,6 +2113,12 @@ static int rockchip_display_probe(struct udevice *dev)
 		memset(s, 0, sizeof(*s));
 
 		INIT_LIST_HEAD(&s->head);
+		ret = ofnode_read_string_index(node, "logo,uboot", 0, &name);
+		if (!ret)
+			memcpy(s->ulogo_name, name, strlen(name));
+		ret = ofnode_read_string_index(node, "logo,kernel", 0, &name);
+		if (!ret)
+			memcpy(s->klogo_name, name, strlen(name));
 		ret = ofnode_read_string_index(node, "logo,mode", 0, &name);
 		if (!strcmp(name, "fullscreen"))
 			s->logo_mode = ROCKCHIP_DISPLAY_FULLSCREEN;
@@ -2174,34 +2162,6 @@ static int rockchip_display_probe(struct udevice *dev)
 		s->crtc_state.crtc = crtc;
 		s->crtc_state.crtc_id = get_crtc_id(np_to_ofnode(ep_node), is_ports_node);
 		s->node = node;
-
-		if(s->crtc_state.crtc_id == 0){
-			ret = ofnode_read_string_index(node, "logo,uboot", 0, &name);//0 degrees
-			if (!ret)
-				memcpy(s->ulogo_name, name, strlen(name));
-
-			ret = ofnode_read_string_index(node, "logo,uboot", 0, &name);
-			if (!ret)
-				memcpy(s->klogo_name, name, strlen(name));
-		}
-		else{
-			if (khadas_mipi_id == 2 || khadas_mipi_id == 4) {
-				ret = ofnode_read_string_index(node, "logo,uboot", 0, &name);//0 degrees
-				if (!ret)
-					memcpy(s->ulogo_name, name, strlen(name));
-				ret = ofnode_read_string_index(node, "logo,uboot", 0, &name);
-				if (!ret)
-					memcpy(s->klogo_name, name, strlen(name));
-			}
-			else{
-				ret = ofnode_read_string_index(node, "logo,kernel", 0, &name);//90 degrees
-				if (!ret)
-					memcpy(s->ulogo_name, name, strlen(name));
-				ret = ofnode_read_string_index(node, "logo,kernel", 0, &name);
-				if (!ret)
-					memcpy(s->klogo_name, name, strlen(name));
-			}
-		}
 
 		if (is_ports_node) { /* only vop2 will get into here */
 			ofnode vp_node = np_to_ofnode(port_node);
