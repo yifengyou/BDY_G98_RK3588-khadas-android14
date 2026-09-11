@@ -1,0 +1,119 @@
+
+/*
+ * Copyright (C) 2020 Rockchip Electronic Co.,Ltd
+ *
+ * Simple U-boot fit source file containing ATF/OP-TEE/U-Boot/dtb/MCU
+ */
+
+/dts-v1/;
+
+/ {
+	description = "FIT Image with ATF/OP-TEE/U-Boot/MCU";
+	#address-cells = <1>;
+
+	images {
+
+		uboot {
+			description = "U-Boot";
+			data = /incbin/("u-boot-nodtb.bin.gz");
+			type = "standalone";
+			arch = "arm64";
+			os = "U-Boot";
+			compression = "gzip";
+			load = <0x00200000>;
+			digest {
+				value = /incbin/("./u-boot-nodtb.bin.digest");
+				algo = "sha256";
+			};
+			hash {
+				algo = "sha256";
+			};
+		};
+		atf-1 {
+			description = "ARM Trusted Firmware";
+			data = /incbin/("./bl31_0x00040000.bin.gz");
+			type = "firmware";
+			arch = "arm64";
+			os = "arm-trusted-firmware";
+			compression = "gzip";
+			load = <0x00040000>;
+			hash {
+				algo = "sha256";
+			};
+			digest {
+				value = /incbin/("./bl31_0x00040000.bin.digest");
+				algo = "sha256";
+			};
+		};
+		atf-2 {
+			description = "ARM Trusted Firmware";
+			data = /incbin/("./bl31_0xff100000.bin");
+			type = "firmware";
+			arch = "arm64";
+			os = "arm-trusted-firmware";
+			compression = "none";
+			load = <0xff100000>;
+			hash {
+				algo = "sha256";
+			};
+		};
+		atf-3 {
+			description = "ARM Trusted Firmware";
+			data = /incbin/("./bl31_0x000f0000.bin");
+			type = "firmware";
+			arch = "arm64";
+			os = "arm-trusted-firmware";
+			compression = "none";
+			load = <0x000f0000>;
+			hash {
+				algo = "sha256";
+			};
+		};
+		optee {
+			description = "OP-TEE";
+			data = /incbin/("tee.bin.gz");
+			type = "firmware";
+			arch = "arm64";
+			os = "op-tee";
+			compression = "gzip";
+			
+			load = <0x8400000>;
+			digest {
+				value = /incbin/("./tee.bin.digest");
+				algo = "sha256";
+			};
+			hash {
+				algo = "sha256";
+			};
+		};
+		fdt {
+			description = "U-Boot dtb";
+			data = /incbin/("./u-boot.dtb");
+			type = "flat_dt";
+			arch = "arm64";
+			compression = "none";
+			hash {
+				algo = "sha256";
+			};
+		};
+	};
+
+	configurations {
+		default = "conf";
+		conf {
+			description = "kedge2";
+			rollback-index = <0x0>;
+			firmware = "atf-1";
+			loadables = "uboot", "atf-2", "atf-3", "optee";
+			
+			fdt = "fdt";
+			signature {
+								algo = "sha256,rsa2048";
+				
+				key-name-hint = "dev";
+				sign-images = "firmware", "loadables", "fdt";
+			};
+		};
+	};
+};
+
