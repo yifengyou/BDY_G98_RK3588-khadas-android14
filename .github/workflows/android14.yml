@@ -48,7 +48,7 @@ jobs:
           sudo mount /dev/github/runner /builder
           sudo chown -R runner.runner /builder
           sudo apt-get update
-          sudo apt-get install -y device-tree-compiler zip u-boot-tools
+          sudo apt-get install -y device-tree-compiler zip u-boot-tools python-is-python3 python3
           df -Th
 
       - name: Run Build in Ubuntu 22.04
@@ -59,6 +59,8 @@ jobs:
           sudo /bin/cp -a ${{ github.workspace }}/* .
           ls -alh
           cd u-boot
+          sudo ln -svf /usr/bin/python3 /usr/bin/python2
+          which python2
           ./kdev-build-uboot.sh
           sudo cp uboot.img /builder/release/
 
