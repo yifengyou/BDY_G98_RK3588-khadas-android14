@@ -53,16 +53,23 @@ void main_loop(void)
 
 	cli_init();
 
+	printf("DEBUG: entering main_loop, preboot=%s\n",
+	       env_get("preboot") ? env_get("preboot") : "<NULL>");
+
 	run_preboot_environment_command();
+
+	printf("DEBUG: preboot done, calling bootdelay_process\n");
 
 #if defined(CONFIG_UPDATE_TFTP)
 	update_tftp(0UL, NULL, NULL);
 #endif /* CONFIG_UPDATE_TFTP */
 
 	s = bootdelay_process();
+	printf("DEBUG: bootdelay done, bootcmd=%s\n", s ? s : "<NULL>");
 	if (cli_process_fdt(&s))
 		cli_secure_boot_cmd(s);
 
+	printf("DEBUG: calling autoboot_command\n");
 	autoboot_command(s);
 
 	cli_loop();

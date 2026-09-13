@@ -32,6 +32,7 @@ __weak int board_run_command(const char *cmdline)
  */
 int run_command(const char *cmd, int flag)
 {
+	printf("DEBUG: run_command: cmd='%s', flag=%d\n", cmd ? cmd : "<NULL>", flag);
 #ifndef CONFIG_HUSH_PARSER
 	/*
 	 * cli_run_command can return 0 or 1 for success, so clean up
@@ -79,6 +80,8 @@ int run_command_list(const char *cmd, int len, int flag)
 	int need_buff = 1;
 	char *buff = (char *)cmd;	/* cast away const */
 	int rcode = 0;
+
+	printf("DEBUG: run_command_list: cmd='%s', len=%d, flag=%d\n", cmd ? cmd : "<NULL>", len, flag);
 
 	if (len == -1) {
 		len = strlen(cmd);

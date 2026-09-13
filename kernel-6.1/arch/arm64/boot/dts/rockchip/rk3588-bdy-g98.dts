@@ -8,7 +8,7 @@
 #include <dt-bindings/display/rockchip_vop.h>
 #include "rk3588.dtsi"
 #include "rk3588-rk806-single.dtsi"
-#include "rk3588-linux.dtsi"
+#include "rk3588-android.dtsi"
 
 / {
 	model = "BDY G98";

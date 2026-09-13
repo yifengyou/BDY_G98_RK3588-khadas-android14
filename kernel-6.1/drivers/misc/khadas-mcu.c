@@ -226,6 +226,7 @@ static int mcu_i2c_write_regs(struct i2c_client *client,
 
 int mcu_reboot_boot_mode(void)
 {
+	/*
 	int ret;
 	u8 sendbuf=0;
 	sendbuf =2;
@@ -235,6 +236,7 @@ int mcu_reboot_boot_mode(void)
 		printk("write mcu boot control err\r\n");
 		return ret;
 	}
+	*/
 	return 0;
 }
 EXPORT_SYMBOL(mcu_reboot_boot_mode);

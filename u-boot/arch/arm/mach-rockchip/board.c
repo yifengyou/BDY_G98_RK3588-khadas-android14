@@ -459,8 +459,11 @@ int board_late_init(void)
 #ifdef CONFIG_ROCKCHIP_SET_SN
 	rockchip_set_serialno();
 #endif
+	printf("DEBUG: board_late_init: before setup_download_mode\n");
 	setup_download_mode();
+	printf("DEBUG: board_late_init: after setup_download_mode, before scan_run_cmd\n");
 	scan_run_cmd();
+	printf("DEBUG: board_late_init: after scan_run_cmd\n");
 #ifdef CONFIG_ROCKCHIP_USB_BOOT
 	boot_from_udisk();
 #endif
@@ -469,18 +472,24 @@ int board_late_init(void)
 #endif
 
 #ifdef CONFIG_ROCKCHIP_MINIDUMP
+	printf("DEBUG: board_late_init: before rk_minidump_init\n");
 	rk_minidump_init();
+	printf("DEBUG: board_late_init: after rk_minidump_init\n");
 #endif
 
 #ifdef CONFIG_DRM_ROCKCHIP
-	if (rockchip_get_boot_mode() != BOOT_MODE_QUIESCENT)
+	if (rockchip_get_boot_mode() != BOOT_MODE_QUIESCENT &&
+	    rockchip_get_boot_mode() != BOOT_MODE_RECOVERY)
 		rockchip_show_logo();
 #endif
 #ifdef CONFIG_ROCKCHIP_EINK_DISPLAY
 	rockchip_eink_show_uboot_logo();
 #endif
 #if (CONFIG_ROCKCHIP_BOOT_MODE_REG > 0)
+	printf("DEBUG: board_late_init: before setup_boot_mode\n");
 	setup_boot_mode();
+	printf("DEBUG: board_late_init: after setup_boot_mode, bootdelay=%s\n",
+	       env_get("bootdelay") ? env_get("bootdelay") : "<NULL>");
 #endif
 	env_fixup();
 	soc_clk_dump();
@@ -488,6 +497,7 @@ int board_late_init(void)
 #ifdef CONFIG_AMP
 	amp_cpus_on();
 #endif
+	printf("DEBUG: board_late_init: before rk_board_late_init\n");
 	return rk_board_late_init();
 }
 

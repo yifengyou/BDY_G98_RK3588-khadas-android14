@@ -216,19 +216,13 @@ static int __abortboot(int bootdelay)
 #ifdef CONFIG_MENUPROMPT
 	printf(CONFIG_MENUPROMPT);
 #else
-	//printf("Hit key to stop autoboot('CTRL+C'): %2d ", bootdelay);
 	printf("Hit any key to stop autoboot: %2d ", bootdelay);
 #endif
 
-#ifdef CONFIG_ARCH_ROCKCHIP
-	//if (!IS_ENABLED(CONFIG_CONSOLE_DISABLE_CLI) && ctrlc()) {	/* we press ctrl+c ? */
-	if (tstc()) {	/* we got a key press	*/
-#else
 	/*
 	 * Check if key already pressed
 	 */
 	if (tstc()) {	/* we got a key press	*/
-#endif
 		(void) getc();  /* consume input	*/
 		puts("\b\b\b 0");
 		abort = 1;	/* don't auto boot	*/
@@ -239,12 +233,10 @@ static int __abortboot(int bootdelay)
 		/* delay 1000 ms */
 		ts = get_timer(0);
 		do {
-			//if (ctrlc()) {	/* we got a ctrl+c key press	*/
 			if (tstc()) {	/* we got a key press	*/
 				abort  = 1;	/* don't auto boot	*/
 				bootdelay = 0;	/* no more delay	*/
 # ifdef CONFIG_MENUKEY
-				//menukey = 0x03;	/* ctrl+c key code */
 				menukey = getc();
 # endif
 				break;
@@ -265,14 +257,19 @@ static int abortboot(int bootdelay)
 {
 	int abort = 0;
 
+	printf("DEBUG: abortboot called, bootdelay=%d\n", bootdelay);
+
 	if (bootdelay >= 0)
 		abort = __abortboot(bootdelay);
+	else
+		printf("DEBUG: abortboot: bootdelay<0, skipping __abortboot\n");
 
 #ifdef CONFIG_SILENT_CONSOLE
 	if (abort)
 		gd->flags &= ~GD_FLG_SILENT;
 #endif
 
+	printf("DEBUG: abortboot returning abort=%d\n", abort);
 	return abort;
 }
 
@@ -313,9 +310,13 @@ const char *bootdelay_process(void)
 	s = env_get("bootdelay");
 	bootdelay = s ? (int)simple_strtol(s, NULL, 10) : CONFIG_BOOTDELAY;
 
+	printf("DEBUG: bootdelay_process: env bootdelay='%s', parsed=%d, CONFIG=%d\n",
+	       s ? s : "<NULL>", bootdelay, CONFIG_BOOTDELAY);
+
 #ifdef CONFIG_OF_CONTROL
 	bootdelay = fdtdec_get_config_int(gd->fdt_blob, "bootdelay",
 			bootdelay);
+	printf("DEBUG: bootdelay after fdt=%d\n", bootdelay);
 #endif
 
 	debug("### main_loop entered: bootdelay=%d\n\n", bootdelay);
@@ -355,7 +356,11 @@ void autoboot_command(const char *s)
 {
 	debug("### main_loop: bootcmd=\"%s\"\n", s ? s : "<UNDEFINED>");
 
+	printf("DEBUG: autoboot_command: s=%s, stored_bootdelay=%d\n",
+	       s ? s : "<NULL>", stored_bootdelay);
+
 	if (stored_bootdelay != -1 && s && !abortboot(stored_bootdelay)) {
+		printf("DEBUG: autoboot: running bootcmd\n");
 #if defined(CONFIG_AUTOBOOT_KEYED) && !defined(CONFIG_AUTOBOOT_KEYED_CTRLC)
 		int prev = disable_ctrlc(1);	/* disable Control C checking */
 #endif
@@ -366,6 +371,9 @@ void autoboot_command(const char *s)
 #if defined(CONFIG_AUTOBOOT_KEYED) && !defined(CONFIG_AUTOBOOT_KEYED_CTRLC)
 		disable_ctrlc(prev);	/* restore Control C checking */
 #endif
+	} else {
+		printf("DEBUG: autoboot: SKIPPED (stored_bootdelay=%d, s=%p)\n",
+		       stored_bootdelay, s);
 	}
 
 #ifdef CONFIG_MENUKEY

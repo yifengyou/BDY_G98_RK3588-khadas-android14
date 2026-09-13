@@ -805,6 +805,48 @@ static int hym8563_resume(struct device *dev)
 static SIMPLE_DEV_PM_OPS(hym8563_pm_ops, hym8563_suspend, hym8563_resume);
 #endif
 
+/*
+ * hym8563->wake_lock embeds a struct wakeup_source (see linux/wakelock.h:
+ * struct wake_lock { struct wakeup_source ws; }). wake_lock_init() links
+ * &hym8563->wake_lock.ws.entry into the *global* wakeup_sources list.
+ *
+ * hym8563 itself is devm_kzalloc()'d. If probe() returns an error on any
+ * of the paths below wake_lock_destroy() was never called, i2c core's
+ * devres_release_group() frees the hym8563 block while wake_lock.ws.entry
+ * is still linked into the global list. The next time that list is
+ * walked/unlinked (e.g. i2c core's own device_wakeup_disable() call right
+ * after, in the same error path) it touches freed memory:
+ *
+ *   BUG: KASAN: use-after-free in __list_del_entry_valid
+ *   ... wakeup_source_unregister -> device_wakeup_disable -> i2c_device_probe
+ *   Allocated by hym8563_probe -> devm_kzalloc
+ *
+ * Fix: tie wake_lock_destroy() to the devm lifetime of the hym8563 struct
+ * itself, so it always runs before the memory is freed, on every error
+ * path and on driver removal, instead of relying on every "return ret;"
+ * to remember to clean it up.
+ */
+static void hym8563_wake_lock_destroy(void *data)
+{
+	struct hym8563 *hym8563 = data;
+
+	wake_lock_destroy(&hym8563->wake_lock);
+}
+
+/*
+ * Symmetric cleanup for device_init_wakeup(&client->dev, true). Not the
+ * direct cause of the UAF above (i2c core's own error path already calls
+ * device_wakeup_disable() once), but leaving it unpaired on every error
+ * return is fragile - tie it to devm as well so enable/disable is always
+ * balanced regardless of which line in probe() fails.
+ */
+static void hym8563_wakeup_disable(void *data)
+{
+	struct i2c_client *client = data;
+
+	device_init_wakeup(&client->dev, false);
+}
+
 static int hym8563_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
@@ -832,9 +874,16 @@ static int hym8563_probe(struct i2c_client *client,
 	hym8563->client = client;
 	mutex_init(&hym8563->mutex);
 	wake_lock_init(&hym8563->wake_lock, WAKE_LOCK_SUSPEND, "rtc_hym8563");
+	ret = devm_add_action_or_reset(&client->dev, hym8563_wake_lock_destroy,
+					hym8563);
+	if (ret)
+		return ret;
+
 	i2c_set_clientdata(client, hym8563);
 
-	hym8563_init_device(client);
+	ret = hym8563_init_device(client);
+	if (ret < 0)
+		dev_warn(&client->dev, "init device failed, %d\n", ret);
 
 	if (client->irq > 0) {
 		ret = devm_request_threaded_irq(&client->dev, client->irq,
@@ -851,6 +900,10 @@ static int hym8563_probe(struct i2c_client *client,
 	if (client->irq > 0 ||
 	    device_property_read_bool(&client->dev, "wakeup-source")) {
 		device_init_wakeup(&client->dev, true);
+		ret = devm_add_action_or_reset(&client->dev,
+						hym8563_wakeup_disable, client);
+		if (ret)
+			return ret;
 	}
 
 	/* check state of calendar information */

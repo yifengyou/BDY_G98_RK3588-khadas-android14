@@ -230,8 +230,13 @@ int rockchip_get_boot_mode(void)
 int setup_boot_mode(void)
 {
 	char env_preboot[256] = {0};
+	int boot_mode = rockchip_get_boot_mode();
 
-	switch (rockchip_get_boot_mode()) {
+	/* Ensure bootdelay is positive to allow key-press interruption */
+	if (env_get_ulong("bootdelay", 10, CONFIG_BOOTDELAY) < 0)
+		env_set_ulong("bootdelay", CONFIG_BOOTDELAY);
+
+	switch (boot_mode) {
 	case BOOT_MODE_BOOTLOADER:
 		printf("enter fastboot!\n");
 #if defined(CONFIG_FASTBOOT_FLASH_MMC_DEV)

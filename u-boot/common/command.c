@@ -507,6 +507,9 @@ enum command_ret_t cmd_process(int flag, int argc, char * const argv[],
 	enum command_ret_t rc = CMD_RET_SUCCESS;
 	cmd_tbl_t *cmdtp;
 
+	printf("DEBUG: cmd_process: argv[0]='%s', argc=%d, flag=%d\n",
+	       argv[0] ? argv[0] : "<NULL>", argc, flag);
+
 	/* Look up command in command table */
 	cmdtp = find_cmd(argv[0]);
 	if (cmdtp == NULL) {
