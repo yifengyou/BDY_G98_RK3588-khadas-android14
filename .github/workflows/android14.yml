@@ -1,4 +1,4 @@
-name: G98 khadas Android14 build
+name: G98 Android14 (khadas & ONLY-EMMC)
 
 on:
   push:
@@ -86,8 +86,8 @@ jobs:
           which python2
           ./kdev-build-uboot.sh
           TIMESTAMP=$(date +%Y%m%d)
-          sudo cp uboot.img /builder/release/uboot.img
-          sudo cp uboot.img /builder/release/uboot-${TIMESTAMP}.img
+          sudo cp uboot.img /builder/release/uboot-only-emmc.img
+          sudo cp uboot.img /builder/release/uboot-${TIMESTAMP}-only-emmc.img
 
       - name: Upload Uboot to Release
         uses: ncipollo/release-action@main
@@ -121,8 +121,8 @@ jobs:
           ls -alh
           ./kdev-build-kernel.sh
           TIMESTAMP=$(date +%Y%m%d)
-          sudo cp boot.img /builder/release/boot.img
-          sudo cp boot.img /builder/release/boot-${TIMESTAMP}.img
+          sudo cp boot.img /builder/release/boot-only-emmc.img
+          sudo cp boot.img /builder/release/boot-${TIMESTAMP}-only-emmc.img
 
       - name: Upload Kernel to Release
         uses: ncipollo/release-action@main
@@ -146,11 +146,20 @@ jobs:
             - **无官方关联**：本项目与 Rockchip、彼度云 任何商业实体无关，为非盈利自由分享。
             - **安全提示**：部署后请及时更新安全补丁、修改默认密码、配置防火墙及访问控制策略。
 
+      - name: Build Android
+        working-directory: /builder
+        run: |
+          set -x
+          WORKDIR=`pwd`
+          sudo mkdir -p /builder/release/
+          cd ${WORKDIR}
+
+
       - name: Upload Android14 to Release
         uses: ncipollo/release-action@main
         with:
           tag: g98_android14
-          artifacts: /builder/release/g98-android14-update.img*
+          artifacts: /builder/release/g98-android14-update-only-emmc.img
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true
