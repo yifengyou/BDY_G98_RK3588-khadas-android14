@@ -3341,3 +3341,11 @@ void ethtool_rx_flow_rule_destroy(struct ethtool_rx_flow_rule *flow)
 	kfree(flow);
 }
 EXPORT_SYMBOL(ethtool_rx_flow_rule_destroy);
+
+void ethtool_puts(u8 **data, const char *str)
+{
+    strscpy(*data, str, ETH_GSTRING_LEN);
+    *data += ETH_GSTRING_LEN;
+}
+EXPORT_SYMBOL(ethtool_puts);
+

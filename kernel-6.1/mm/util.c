@@ -139,6 +139,27 @@ void *kmemdup(const void *src, size_t len, gfp_t gfp)
 EXPORT_SYMBOL(kmemdup);
 
 /**
+ * kvmemdup - duplicate region of memory
+ *
+ * @src: memory region to duplicate
+ * @len: memory region length
+ * @gfp: GFP mask to use
+ *
+ * Return: newly allocated copy of @src or %NULL in case of error,
+ * result may be not physically contiguous. Use kvfree() to free.
+ */
+void *kvmemdup(const void *src, size_t len, gfp_t gfp)
+{
+    void *p;
+
+    p = kvmalloc(len, gfp);
+    if (p)
+        memcpy(p, src, len);
+    return p;
+}
+EXPORT_SYMBOL(kvmemdup);
+
+/**
  * kmemdup_nul - Create a NUL-terminated string from unterminated data
  * @s: The data to stringify
  * @len: The size of the data
