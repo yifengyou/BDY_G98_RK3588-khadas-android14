@@ -97,8 +97,8 @@ jobs:
           which python2
           ./kdev-build-uboot.sh
           TIMESTAMP=$(date +%Y%m%d)
-          sudo cp uboot.img /builder/release/uboot-only-emmc.img
-          sudo cp uboot.img /builder/release/uboot-${TIMESTAMP}-only-emmc.img
+          sudo cp uboot.img /builder/release/uboot.img
+          sudo cp uboot.img /builder/release/uboot-${TIMESTAMP}.img
 
       - name: Upload Uboot to Release
         if: ${{ inputs.build_target == 'all' || inputs.build_target == 'uboot' }}
@@ -134,8 +134,8 @@ jobs:
           ls -alh
           ./kdev-build-kernel.sh
           TIMESTAMP=$(date +%Y%m%d)
-          sudo cp boot.img /builder/release/boot-only-emmc.img
-          sudo cp boot.img /builder/release/boot-${TIMESTAMP}-only-emmc.img
+          sudo cp boot.img /builder/release/boot.img
+          sudo cp boot.img /builder/release/boot-${TIMESTAMP}.img
 
       - name: Upload Kernel to Release
         if: ${{ inputs.build_target == 'all' || inputs.build_target == 'kernel' }}
