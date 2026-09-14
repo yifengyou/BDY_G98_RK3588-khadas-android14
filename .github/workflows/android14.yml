@@ -179,7 +179,7 @@ jobs:
         uses: ncipollo/release-action@main
         with:
           tag: g98_android14
-          artifacts: /builder/release/BDY-G98-Anadoid13*
+          artifacts: /builder/release/BDY-G98-Anadoid*
           allowUpdates: true
           removeArtifacts: false
           replacesArtifacts: true
