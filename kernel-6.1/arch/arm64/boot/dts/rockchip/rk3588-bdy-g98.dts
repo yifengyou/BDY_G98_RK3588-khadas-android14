@@ -859,6 +859,7 @@
 				label = "lan5";
 				phy-mode = "internal";
 				phy-handle = <&sw1phy1>;
+				local-mac-address = [02 11 22 33 44 05];
 			};
 
 			ethernet-port@2 {
@@ -866,6 +867,7 @@
 				label = "lan6";
 				phy-mode = "internal";
 				phy-handle = <&sw1phy2>;
+				local-mac-address = [02 11 22 33 44 06];
 			};
 
 			ethernet-port@3 {
@@ -873,6 +875,7 @@
 				label = "lan7";
 				phy-mode = "internal";
 				phy-handle = <&sw1phy3>;
+				local-mac-address = [02 11 22 33 44 07];
 			};
 
 			ethernet-port@4 {
@@ -880,6 +883,7 @@
 				label = "lan8";
 				phy-mode = "internal";
 				phy-handle = <&sw1phy4>;
+				local-mac-address = [02 11 22 33 44 08];
 			};
 
 			ethernet-port@9 {
@@ -917,14 +921,15 @@
 		};
 
 		ethernet-ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
+			#address-cells = <0x01>;
+			#size-cells = <0x00>;
 
 			ethernet-port@1 {
 				reg = <0x01>;
 				label = "lan1";
 				phy-mode = "internal";
 				phy-handle = <&sw0phy1>;
+				local-mac-address = [02 11 22 33 44 01];
 			};
 
 			ethernet-port@2 {
@@ -932,6 +937,7 @@
 				label = "lan2";
 				phy-mode = "internal";
 				phy-handle = <&sw0phy2>;
+				local-mac-address = [02 11 22 33 44 02];
 			};
 
 			ethernet-port@3 {
@@ -939,6 +945,7 @@
 				label = "lan3";
 				phy-mode = "internal";
 				phy-handle = <&sw0phy3>;
+				local-mac-address = [02 11 22 33 44 03];
 			};
 
 			ethernet-port@4 {
@@ -946,6 +953,7 @@
 				label = "lan4";
 				phy-mode = "internal";
 				phy-handle = <&sw0phy4>;
+				local-mac-address = [02 11 22 33 44 04];
 			};
 
 			ethernet-port@9 {
