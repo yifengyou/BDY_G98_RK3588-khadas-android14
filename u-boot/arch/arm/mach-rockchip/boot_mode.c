@@ -206,6 +206,10 @@ int rockchip_get_boot_mode(void)
 			printf("boot mode: quiescent\n");
 			boot_mode[PL] = BOOT_MODE_QUIESCENT;
 			break;
+		case BOOT_REBOOT_TEST:
+			printf("boot mode: reboot test\n");
+			boot_mode[PL] = BOOT_MODE_REBOOT_TEST;
+			break;
 		default:
 			printf("boot mode: None\n");
 			boot_mode[PL] = BOOT_MODE_UNDEFINE;
@@ -230,13 +234,8 @@ int rockchip_get_boot_mode(void)
 int setup_boot_mode(void)
 {
 	char env_preboot[256] = {0};
-	int boot_mode = rockchip_get_boot_mode();
 
-	/* Ensure bootdelay is positive to allow key-press interruption */
-	if (env_get_ulong("bootdelay", 10, CONFIG_BOOTDELAY) < 0)
-		env_set_ulong("bootdelay", CONFIG_BOOTDELAY);
-
-	switch (boot_mode) {
+	switch (rockchip_get_boot_mode()) {
 	case BOOT_MODE_BOOTLOADER:
 		printf("enter fastboot!\n");
 #if defined(CONFIG_FASTBOOT_FLASH_MMC_DEV)
@@ -262,11 +261,16 @@ int setup_boot_mode(void)
 	case BOOT_MODE_LOADER:
 		printf("enter Rockusb!\n");
 		env_set("preboot", "setenv preboot; download");
+		run_command("gpio clear 138; gpio clear 139; gpio set 140;", 0);
 		run_command("download", 0);
 		break;
 	case BOOT_MODE_CHARGING:
 		printf("enter charging!\n");
 		env_set("preboot", "setenv preboot; charge");
+		break;
+	case BOOT_MODE_REBOOT_TEST:
+		printf("enter reboot test mode!\n");
+		env_set("reboot_mode", "reboot_test");
 		break;
 	}
 

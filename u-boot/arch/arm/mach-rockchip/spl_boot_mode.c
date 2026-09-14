@@ -60,7 +60,7 @@ int rockchip_get_boot_mode(struct blk_desc *dev_desc, u32 bcb_sector_offset)
 		printf("boot mode: bootloader\n");
 		boot_mode = BOOT_MODE_BOOTLOADER;
 	} else if (misc_require_recovery(dev_desc, bcb_sector_offset)) {
-		printf("boot mode: recovery (misc) #kdev spl\n");
+		printf("boot mode: recovery (misc)\n");
 		boot_mode = BOOT_MODE_RECOVERY;
 	} else {
 		switch (reg_boot_mode) {
