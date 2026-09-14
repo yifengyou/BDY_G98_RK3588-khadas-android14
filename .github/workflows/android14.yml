@@ -80,7 +80,7 @@ jobs:
             qemu-user-static rar rdfind rename rsync sed \
             squashfs-tools swig tar tree u-boot-tools udev unzip util-linux uuid \
             uuid-dev uuid-runtime vim wget whiptail xfsprogs xsltproc xxd xz-utils \
-            zip zlib1g-dev zstd binwalk ripgrep sudo
+            zip zlib1g-dev zstd binwalk ripgrep sudo mkbootimg
           sudo mkdir -p /builder/release/
           sudo /bin/cp -a ${{ github.workspace }}/* /builder/
           sudo ln -svf /usr/bin/python3 /usr/bin/python2
