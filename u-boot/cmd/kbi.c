@@ -253,11 +253,20 @@ static void get_version(void)
 
 static void get_usid(void)
 {
+	/*
 	char serial[64]={0};
 	char usid[USID_LENGHT] = {0};
 
 	kbi_i2c_read_block(REG_USID, USID_LENGHT, usid);
 	sprintf(serial, "%02X%02X%02X%02X%02X%02X%02X",usid[0],usid[1],usid[2],usid[3],usid[4],usid[5],usid[6]);
+	printf("usid:%s\r\n",serial);
+	env_set("usid", serial);
+	*/
+
+	// kdev hack, setup static usid
+	// USID, Unique Serial ID
+	char serial[64]={0};
+	strcpy(serial, "1A2B3C4D5E6F70");
 	printf("usid:%s\r\n",serial);
 	env_set("usid", serial);
 }
@@ -511,6 +520,8 @@ static int do_kbi_init(cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[
 {
 	int khadas_camera_id = 0;//NULL
 
+	// kdev hack, no need for camera init
+	return 0;
 	// switch to i2c2
 	printf("hlm %s\n", __func__);
 	run_command("i2c dev 3", 0);
