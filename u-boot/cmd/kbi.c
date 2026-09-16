@@ -266,7 +266,8 @@ static void get_usid(void)
 	// kdev hack, setup static usid
 	// USID, Unique Serial ID
 	char serial[64]={0};
-	strcpy(serial, "1A2B3C4D5E6F70");
+	//strcpy(serial, "1A2B3C4D5E6F70");
+	strcpy(serial, "HKZDXW5396095048");
 	printf("usid:%s\r\n",serial);
 	env_set("usid", serial);
 }
